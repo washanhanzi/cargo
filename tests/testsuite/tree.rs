@@ -92,6 +92,8 @@ fn virtual_workspace() {
             name = "baz"
             version = "0.1.0"
 
+            [lib]
+
             [dependencies]
             c = { path = "../c" }
             somedep = "1.0"
@@ -2126,6 +2128,80 @@ foo v1.0.0 ([ROOT]/foo)
         │   [dev-dependencies]
         │   └── foo v1.0.0 ([ROOT]/foo) (*)
         └── bar feature "feat1" (command-line) (*)
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn virtual_workspace_dependencies() {
+    // Multiple packages in a virtual workspace.
+    Package::new("somedep", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace.package]
+            rust-version = "1.78"
+            edition = "2021"
+
+            [workspace]
+            members = ["./crates/*"]
+
+            [workspace.dependencies]
+            bar = { path = "./crates/bar" }
+            qux = { path = "./crates/qux" }
+
+            "#,
+        )
+        .file(
+            "crates/bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "1.0.0"
+
+            [dev-dependencies]
+            qux.workspace = true
+            "#,
+        )
+        .file("crates/qux/src/lib.rs", "")
+        .file(
+            "crates/qux/Cargo.toml",
+            r#"
+            [package]
+            name = "qux"
+            version = "1.0.0"
+
+            [dev-dependencies]
+            somedep = "1.0"
+            "#,
+        )
+        .file("crates/bar/src/lib.rs", "")
+        .build();
+
+    // with depth 1
+    p.cargo("tree --depth 1")
+        .with_stdout_data(str![[r#"
+bar v1.0.0 ([ROOT]/foo/crates/bar)
+[dev-dependencies]
+└── qux v1.0.0 ([ROOT]/foo/crates/qux)
+
+qux v1.0.0 ([ROOT]/foo/crates/qux) (*)
+
+"#]])
+        .run();
+
+    p.cargo("tree")
+        .with_stdout_data(str![[r#"
+bar v1.0.0 ([ROOT]/foo/crates/bar)
+[dev-dependencies]
+└── qux v1.0.0 ([ROOT]/foo/crates/qux)
+    [dev-dependencies]
+    └── somedep v1.0.0
+
+qux v1.0.0 ([ROOT]/foo/crates/qux) (*)
 
 "#]])
         .run();

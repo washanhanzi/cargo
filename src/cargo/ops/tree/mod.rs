@@ -360,6 +360,12 @@ fn print_dependencies<'a>(
         return;
     }
 
+    // Current level exceeds maximum display depth. Skip.
+    // don't print table name
+    if levels_continue.len() + 1 > max_display_depth as usize {
+        return;
+    }
+
     let name = match kind {
         EdgeKind::Dep(DepKind::Normal) => None,
         EdgeKind::Dep(DepKind::Build) => Some("[build-dependencies]"),
@@ -376,11 +382,6 @@ fn print_dependencies<'a>(
 
             drop_println!(gctx, "{}", name);
         }
-    }
-
-    // Current level exceeds maximum display depth. Skip.
-    if levels_continue.len() + 1 > max_display_depth as usize {
-        return;
     }
 
     let mut it = deps
