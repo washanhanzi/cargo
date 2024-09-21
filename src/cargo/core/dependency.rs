@@ -51,7 +51,7 @@ struct Inner {
     platform: Option<Platform>,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct SerializedDependency {
     name: InternedString,
     source: SourceId,
